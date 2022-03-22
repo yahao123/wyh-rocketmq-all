@@ -95,10 +95,16 @@ public class DefaultMQProducer extends ClientConfig implements MQProducer {
     private int sendMsgTimeout = 3000;
 
     /**
+     * 如果消息内容大于此阈值的话会对消息进行压缩
+     */
+    /**
      * Compress message body threshold, namely, message body larger than 4k will be compressed on default.
      */
     private int compressMsgBodyOverHowmuch = 1024 * 4;
 
+    /**
+     * 发送失败后的重置次数
+     */
     /**
      * Maximum number of retry to perform internally before claiming sending failure in synchronous mode.
      * </p>
@@ -120,6 +126,9 @@ public class DefaultMQProducer extends ClientConfig implements MQProducer {
      */
     private boolean retryAnotherBrokerWhenNotStoreOK = false;
 
+    /**
+     * 消息体的最大大小
+     */
     /**
      * Maximum allowed message size in bytes.
      */

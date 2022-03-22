@@ -177,11 +177,12 @@ public class DefaultMQProducerImpl implements MQProducerInner {
                 this.checkConfig();
 
                 if (!this.defaultMQProducer.getProducerGroup().equals(MixAll.CLIENT_INNER_PRODUCER_GROUP)) {
+                    // 修改实例名称,如果没有设置的话就把进程ID设置为 instanceName
                     this.defaultMQProducer.changeInstanceNameToPID();
                 }
-
+                // 创建一个 MqClientInstance, 这个MqClientInstance是全局唯一的
                 this.mQClientFactory = MQClientManager.getInstance().getAndCreateMQClientInstance(this.defaultMQProducer, rpcHook);
-
+                // 注册MqProducer, 在 MqClientInstance 中有一个Map, key: groupName, value: this
                 boolean registerOK = mQClientFactory.registerProducer(this.defaultMQProducer.getProducerGroup(), this);
                 if (!registerOK) {
                     this.serviceState = ServiceState.CREATE_JUST;
