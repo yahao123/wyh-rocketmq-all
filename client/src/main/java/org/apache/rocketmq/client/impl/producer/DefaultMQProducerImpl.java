@@ -194,6 +194,13 @@ public class DefaultMQProducerImpl implements MQProducerInner {
                 this.topicPublishInfoTable.put(this.defaultMQProducer.getCreateTopicKey(), new TopicPublishInfo());
 
                 if (startFactory) {
+                    /**
+                     *  核心模块开始,
+                     *      1. 这里会开启心跳
+                     *      2. 开始获取消息的任务
+                     *      3. 启动一个默认的Producer
+                     *      4. 初始化RebalanceService
+                     */
                     mQClientFactory.start();
                 }
 
