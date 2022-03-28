@@ -329,7 +329,7 @@ public class DefaultMQPushConsumerImpl implements MQConsumerInner {
 
                                 DefaultMQPushConsumerImpl.this.getConsumerStatsManager().incPullTPS(pullRequest.getConsumerGroup(),
                                     pullRequest.getMessageQueue().getTopic(), pullResult.getMsgFoundList().size());
-
+                                // 把消息放到ProcessQueue中
                                 boolean dispatchToConsume = processQueue.putMessage(pullResult.getMsgFoundList());
                                 // 把拉取回来的消息丢给consumer
                                 DefaultMQPushConsumerImpl.this.consumeMessageService.submitConsumeRequest(
@@ -592,6 +592,7 @@ public class DefaultMQPushConsumerImpl implements MQConsumerInner {
                 this.copySubscription();
 
                 if (this.defaultMQPushConsumer.getMessageModel() == MessageModel.CLUSTERING) {
+                    // 设置instance的name, 如果当前的instanceName是Default的话会把InstanceName改为当前的进程号
                     this.defaultMQPushConsumer.changeInstanceNameToPID();
                 }
                 // 创建一个MQClientInstance 全局唯一
@@ -611,13 +612,14 @@ public class DefaultMQPushConsumerImpl implements MQConsumerInner {
                 if (this.defaultMQPushConsumer.getOffsetStore() != null) {
                     this.offsetStore = this.defaultMQPushConsumer.getOffsetStore();
                 } else {
+                    // 根据消息模式分别使用不同的offset存储方式
                     switch (this.defaultMQPushConsumer.getMessageModel()) {
                         case BROADCASTING:
-                            // 广播消息本地持久化offset
+                            // 广播消息 会把offset持久化到本地
                             this.offsetStore = new LocalFileOffsetStore(this.mQClientFactory, this.defaultMQPushConsumer.getConsumerGroup());
                             break;
                         case CLUSTERING:
-                            // 集群模式持久化到broker
+                            // 集群模式 将offset持久化到broker
                             this.offsetStore = new RemoteBrokerOffsetStore(this.mQClientFactory, this.defaultMQPushConsumer.getConsumerGroup());
                             break;
                         default:
@@ -637,9 +639,11 @@ public class DefaultMQPushConsumerImpl implements MQConsumerInner {
                     this.consumeMessageService =
                         new ConsumeMessageConcurrentlyService(this, (MessageListenerConcurrently) this.getMessageListenerInner());
                 }
-                // 启动清理等待处理消息服务
+                // 启动过期消息清理线程 每隔15分钟执行一次
                 this.consumeMessageService.start();
-                // 注册consumer, 这里保证在一个消费者实例中一个消费组只能存在一个
+                // 注册consumer
+                // MQClientInstance中有一个ConcurrentHashMap, 用来存储当前客户端下的所有消费者，key为consumerGroup value为ConsumerImpl,
+                // 从这里可以看到一个consumerGroup中只能对应一个消费者
                 boolean registerOK = mQClientFactory.registerConsumer(this.defaultMQPushConsumer.getConsumerGroup(), this);
                 if (!registerOK) {
                     this.serviceState = ServiceState.CREATE_JUST;
@@ -665,6 +669,7 @@ public class DefaultMQPushConsumerImpl implements MQConsumerInner {
         }
 
         this.updateTopicSubscribeInfoWhenSubscriptionChanged();
+        // 如果consumer没有tag的话会去向broker发送一次请求做一次核查
         this.mQClientFactory.checkClientInBroker();
         this.mQClientFactory.sendHeartbeatToAllBrokerWithLock();
         this.mQClientFactory.rebalanceImmediately();
